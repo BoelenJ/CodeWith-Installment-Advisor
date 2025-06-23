@@ -1,47 +1,77 @@
-﻿using Microsoft.SemanticKernel;
-using Microsoft.SemanticKernel.Agents;
+﻿using Azure.AI.Agents.Persistent;
 using InstallmentAdvisor.ChatApi.Models;
+using Microsoft.SemanticKernel;
+using Microsoft.SemanticKernel.Agents;
+using Microsoft.SemanticKernel.Agents.AzureAI;
 
 namespace InstallmentAdvisor.ChatApi.Agents
 {
     public class OrchestratorAgentFactory
     {
-        public static ChatCompletionAgent CreateAgent(Kernel kernel, List<Agent> agents, List<ToolCall>? toolCallList)
+        public static async Task<AzureAIAgent> CreateAgentAsync(PersistentAgentsClient client, string agentName, string instructions, string modelName, List<Agent>? subAgents, List<ToolCall>? toolCallList)
         {
-            Kernel agentKernel = kernel.Clone();
 
-            // Loop over agents and register them in the agent kernel
-            if(agents != null && agents.Count > 0)
+            PersistentAgent agentDefinition = await client.Administration.CreateAgentAsync(
+                model: modelName,
+                name: agentName,
+                instructions: instructions
+            );
+            AzureAIAgent agent = new(agentDefinition, client);
+
+            RegisterSubAgents(agent, subAgents);
+
+            if (toolCallList != null)
             {
-                List<KernelFunction> subAgents = new List<KernelFunction>();
-                foreach (Agent agent in agents)
+                agent.Kernel.AutoFunctionInvocationFilters.Add(new AutoFunctionInvocationFilter(toolCallList));
+            }
+
+            return agent;
+        }
+        public static AzureAIAgentThread GetOrCreateThread(AzureAIAgent agent, string? threadId)
+        {
+
+            if (threadId == null)
+            {
+                return new AzureAIAgentThread(agent.Client);
+            } else
+            {
+                return new AzureAIAgentThread(agent.Client, threadId);
+            }
+        }
+
+        public static async Task<AzureAIAgent> GetAgentAsync(PersistentAgentsClient client, string agentId, List<Agent>? subAgents, List<ToolCall>? toolCallList)
+        {
+
+            PersistentAgent agentDefinition = await client.Administration.GetAgentAsync(agentId);
+            AzureAIAgent agent = new(agentDefinition, client);
+
+            RegisterSubAgents(agent, subAgents);
+
+            return agent;
+        }
+
+        public static async Task<bool> DeleteAgentAsync(PersistentAgentsClient client, string agentId)
+        {
+            if (!string.IsNullOrEmpty(agentId))
+            {
+                return await client.Administration.DeleteAgentAsync(agentId);
+            }
+
+            return false;
+        }
+
+        private static void RegisterSubAgents(AzureAIAgent agent, List<Agent>? subAgents)
+        {
+            if (subAgents != null && subAgents.Count > 0)
+            {
+                List<KernelFunction> subAgentAsFunctions = new List<KernelFunction>();
+                foreach (Agent subAgent in subAgents)
                 {
-                    subAgents.Add(AgentKernelFunctionFactory.CreateFromAgent(agent));
+                    subAgentAsFunctions.Add(AgentKernelFunctionFactory.CreateFromAgent(subAgent));
                 }
-
-                KernelPlugin agentPlugin =KernelPluginFactory.CreateFromFunctions("AgentsPlugin", subAgents);
-                agentKernel.Plugins.Add(agentPlugin);
+                KernelPlugin agentPlugin = KernelPluginFactory.CreateFromFunctions("AgentsPlugin", subAgentAsFunctions);
+                agent.Kernel.Plugins.Add(agentPlugin);
             }
-
-            if(toolCallList != null)
-            {
-                agentKernel.AutoFunctionInvocationFilters.Add(new AutoFunctionInvocationFilter(toolCallList));
-            }
-
-            return new()
-            {
-                Name = "orchestratoragent",
-                Description = "This agent orchestrates the conversation between the user and the AI agents.",
-                Instructions = """
-                    You are an orchestrator agent that manages the conversation flow between different agents.
-                    You will delegate tasks to other agents based on the user's input, consulting multiple agents if necessary.
-                    If the user asks questions about energy usage, installment amounts etc., use the scenario agent to provide detailed information about energy consumption scenarios.
-                    If the user asks for a joke, use the joke agent to provide a humorous energy-related joke.
-                    """,
-                Kernel = agentKernel,
-                Arguments = new KernelArguments(new PromptExecutionSettings() { FunctionChoiceBehavior = FunctionChoiceBehavior.Auto() })
-            };
-
         }
         public class AutoFunctionInvocationFilter(List<ToolCall> toolCallList) : IAutoFunctionInvocationFilter
         {
