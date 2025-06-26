@@ -10,6 +10,9 @@ using Microsoft.Azure.Cosmos;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.Agents.AzureAI;
 using ModelContextProtocol.Client;
+using Microsoft.Agents.Builder;
+using Microsoft.Agents.Hosting.AspNetCore;
+using Microsoft.Agents.Storage;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -23,8 +26,8 @@ builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 
 builder.Services.AddKernel().AddAzureOpenAIChatCompletion(
-    builder.Configuration["AiFoundry:ModelName"]!, 
-    endpoint: builder.Configuration["AiFoundry:OpenAiBaseUrl"]!, 
+    builder.Configuration["AiFoundry:ModelName"]!,
+    endpoint: builder.Configuration["AiFoundry:OpenAiBaseUrl"]!,
     azureCredential
     );
 
@@ -42,7 +45,7 @@ var mcpToken = await mcpAzureCredential.GetTokenAsync(
         new[] { builder.Configuration["mcpServerApiId"]! }
     )
 );
-var loggerFactory = LoggerFactory.Create(builder =>
+var loggerFactoryConsole = LoggerFactory.Create(builder =>
 {
     builder.AddConsole(c =>
     {
@@ -62,7 +65,7 @@ var mcpClient = await McpClientFactory.CreateAsync(
 
             }
         }
-    ), loggerFactory: loggerFactory
+    ), loggerFactory: loggerFactoryConsole
 );
 
     var toolResponse = await mcpClient.ListToolsAsync().ConfigureAwait(false);
@@ -105,9 +108,24 @@ var agentIds = builder.Configuration["agentIds"]?.Split(';') ?? Array.Empty<stri
 var agentService = new AgentService(aiFoundryClient, agentIds, tools);
 builder.Services.AddSingleton(agentService);
 
+builder.AddAgentApplicationOptions();
+
+builder.AddAgent<SkillAgent>();
+
+builder.Services.AddSingleton<IStorage, MemoryStorage>();
+
 var app = builder.Build();
 
 app.MapDefaultEndpoints();
+
+// Refactor to controller.
+app.MapGet("/", () => "Microsoft Agents SDK Sample");
+
+// This receives incoming messages from Azure Bot Service or other SDK Agents
+app.MapPost("/api/messages", async (HttpRequest request, HttpResponse response, IAgentHttpAdapter adapter, IAgent agent, CancellationToken cancellationToken) =>
+{
+    await adapter.ProcessAsync(request, response, agent, cancellationToken);
+});
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -117,6 +135,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+app.UseStaticFiles();
 
 app.UseAuthorization();
 

@@ -4,6 +4,7 @@
     <TargetFramework>net9.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>2ef552e2-220f-4327-ada6-e4facd8db91a</UserSecretsId>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
@@ -15,6 +16,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Azure.Monitor.OpenTelemetry.Exporter" Version="1.4.0" />
+    <PackageReference Include="Microsoft.Agents.Authentication.Msal" Version="1.1.127-beta" />
+    <PackageReference Include="Microsoft.Agents.Builder" Version="1.1.127-beta" />
+    <PackageReference Include="Microsoft.Agents.Core" Version="1.1.127-beta" />
+    <PackageReference Include="Microsoft.Agents.Hosting.AspNetCore" Version="1.1.127-beta" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.6" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.6" />
     <PackageReference Include="Microsoft.Azure.Cosmos" Version="3.53.0-preview.0" />
@@ -32,6 +38,10 @@
 
   <ItemGroup>
 	 <ProjectReference Include="..\InstallmentAdvisor.ServiceDefaults\InstallmentAdvisor.ServiceDefaults.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="wwwroot\" />
   </ItemGroup>
 
 </Project>

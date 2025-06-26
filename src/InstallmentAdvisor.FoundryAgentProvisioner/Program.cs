@@ -39,6 +39,7 @@ var requiredAgentNames = new List<string>
     AgentConstants.SCENARIO_AGENT_NAME,
     AgentConstants.ORCHESTRATOR_AGENT_NAME
 };
+
 foreach (var agentConstant in requiredAgentNames)
 {
     // Get prompt from configuration
