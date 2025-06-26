@@ -1,0 +1,29 @@
+{
+  "$schema": "https://schemas.botframework.com/schemas/skills/skill-manifest-2.0.0.json",
+  "$id": "SemanticKernelSkill",
+  "name": "Semantic Kernel Skill",
+  "version": "1.0",
+  "description": "This is a sample SK skill",
+  "publisherName": "Microsoft",
+  "privacyUrl": "https://dg4320pd-55018.euw.devtunnels.ms/privacy.html",
+  "copyright": "Copyright (c) Microsoft Corporation. All rights reserved.",
+  "license": "",
+  "tags": [
+    "SK"
+  ],
+  "endpoints": [
+    {
+      "name": "default",
+      "protocol": "BotFrameworkV3",
+      "description": "Default endpoint for the bot",
+      "endpointUrl": "https://dg4320pd-55018.euw.devtunnels.ms/api/messages",
+      "msAppId": "xx"
+    }
+  ],
+  "activities": {
+    "message": {
+      "type": "message",
+      "description": "Echo messages from user"
+    }
+  }
+}
